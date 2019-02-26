@@ -342,11 +342,24 @@ class ConnectionFSM extends BaseConnection {
         return this._didUpgrade(err)
       }
 
+      msDialer.ls((err, protocols) => {
+         if(err) {
+	   return this._didUpgrade(err)
+	 }
+	 protocols.forEach((protocol) => {
+	    this.theirPeerInfo.protocols.add(protocol)
+	 })
+      })
+
+      this.theirPeerInfo.protocols.forEach((protocol) => {
+      
+      })
+
       // 1. try to handshake in one of the muxers available
       // 2. if succeeds
       //  - add the muxedConn to the list of muxedConns
       //  - add incomming new streams to connHandler
-      const nextMuxer = (key) => {
+      /*const nextMuxer = (key) => {
         this.log('selecting %s', key)
         msDialer.select(key, (err, _conn) => {
           if (err) {
@@ -381,7 +394,7 @@ class ConnectionFSM extends BaseConnection {
         })
       }
 
-      nextMuxer(muxers.shift())
+      nextMuxer(muxers.shift())*/
     })
   }
 

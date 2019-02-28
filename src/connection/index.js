@@ -347,12 +347,12 @@ class ConnectionFSM extends BaseConnection {
         if (err) {
           return this._didUpgrade(err)
         }
-        protocols = protocolsArray.concat()
-        protocolsArray.forEach((protocol) => {
-          this.theirPeerInfo.protocols.add(protocol)
-        })
+
+        this.theirPeerInfo.protocols = new Set(protocolsArray)
       })
     })
+
+    protocols = Array.from(this.theirPeerInfo.protocols)
 
     msDialer.handle(this.conn, (err) => {
       if (err) {
@@ -392,6 +392,7 @@ class ConnectionFSM extends BaseConnection {
 
       nextProtocol(protocols.shift())
     })
+
   }
 
   /**

@@ -374,6 +374,8 @@ class ConnectionFSM extends BaseConnection {
             conn.setPeerInfo(this.theirPeerInfo)
             this.switch.protocolMuxer(null)(conn)
           })
+         
+          this._doLs()
 
           this.switch.emit('peer-mux-established', this.theirPeerInfo)
 
@@ -384,6 +386,37 @@ class ConnectionFSM extends BaseConnection {
       nextMuxer(muxers.shift())
     })
   }
+
+  /**
+   *
+   *
+   */
+   _doLs () {
+     const msDialer = new multistream.Dialer()
+     // TODO: this should really happen much earlier. However, currently
+     // `multistream-select.ls` drains the connection so we can no longer read from it.
+     // `multistream-select.ls` should be updated to not end the stream it's on.
+     // This would make it much easier to perform `ls` before crypto occurs.
+     this.muxer.newStream((err, c) => {
+       if (err) {
+         return this.log(err)
+       }
+
+       msDialer.handle(c, (err) => {
+         if (err) {
+	   return this.log(err)
+	 }
+
+	 msDialer.ls((err, protocolsArray) => {
+	   if (err) {
+	     return this.log(err)
+	   }
+
+           this.theirPeerInfo.protocols = new Set(protocolsArray)
+	 })
+       })
+     })
+   }	
 
   /**
    * Analyses the given error, if it exists, to determine where the state machine

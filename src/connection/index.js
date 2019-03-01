@@ -6,6 +6,10 @@ const multistream = require('multistream-select')
 const withIs = require('class-is')
 const BaseConnection = require('./base')
 
+const pull = require('pull-stream/pull')
+const values = require('pull-stream/sources/values')
+const map = require('pull-stream/throughs/map')
+
 const observeConnection = require('../observe-connection')
 const Errors = require('../errors')
 
@@ -330,7 +334,6 @@ class ConnectionFSM extends BaseConnection {
    */
   _onUpgrading () {
     const muxers = Object.keys(this.switch.muxers)
-    let protocols = []
     this.log(`upgrading connection to ${this.theirB58Id}`)
 
     if (muxers.length === 0) {
@@ -343,56 +346,81 @@ class ConnectionFSM extends BaseConnection {
         return this._didUpgrade(err)
       }
 
-      msDialer.ls((err, protocolsArray) => {
+      	    
+      msDialer.ls((err, protocols) => {
         if (err) {
           return this._didUpgrade(err)
         }
 
-        this.theirPeerInfo.protocols = new Set(protocolsArray)
+        this.theirPeerInfo.protocols = new Set(protocols)
+	
+	/*pull(
+	  values(protocols),
+	  map((protocol) => {
+	     this.log('selecting %s', protocol)
+	     msDialer.select(protocol, (err, _conn) => {
+	        if (err) {
+		  return this_didUpgrade(err)
+		}
+
+		const conn = observerConnection(null, protocol, _conn, this.switch.observer)
+
+		this.muxer = this.switch.muxers[protocol].dialer(conn)
+                this.switch.connection.add(this)
+
+		this.muxer.once('close', () => {
+		   this.close()
+		})
+
+		this.muxer.on('stream', (conn) => {
+		   this.log(`new stream created via muxer to ${this.theirB58Id}`)
+		   conn.setPeerInfo(this.theirPeerInfo)
+	           this.switch.protocolMuxer(null)(conn)
+		})
+
+		this.switch.emit('peer-mux-established', this.theirPeerInfo)
+		this._didUpgrade(null)
+
+	     })
+	  })
+	)*/
+	/*pull(
+	  values(protocols),
+	  map((protocol) => {
+	    msDialer.handle(this.conn, (err) => {
+	      if (err) {
+	         return this._didUpgrade(err)
+	      }
+
+	      this.log('selecting %s', protocol)
+              msDialer.select(protocol, (err, _conn) => {
+	         if (err) {
+		   return this._didUpgrade(err)
+		 }
+
+		 const conn = observerConnection(null, protocol, _conn, this.switch.observer)
+
+		 this.muxer = this.switch.muxers[protocol].dialer(conn)
+		 this.switch.connection.add(this)
+
+		 this.muxer.once('close', () => {
+		    this.close()
+		 })
+
+		 this.muxer.on('stream', (conn) => {
+		    this.log(`new stream created via muxer to ${this.theirB58Id}`)
+		    conn.setPeerInfo(this.theirPeerInfo)
+	            this.switch.protocolMuxer(null)(conn)
+		 })
+
+		 this.switch.emit('peer-mux-established', this.theirPeerInfo)
+		 this._didUpgrade(null)
+	      })
+	    })
+	  })
+	)*/
       })
-    })
-
-    protocols = Array.from(this.theirPeerInfo.protocols)
-
-    msDialer.handle(this.conn, (err) => {
-      if (err) {
-        return this._didUpgrade(err)
-      }
-
-      const nextProtocol = (protocol) => {
-        this.log('selecting %s', protocol)
-        msDialer.select(protocol, (err, _conn) => {
-          if (err) {
-            if (protocols.length === 0) {
-              this._didUpgrade(err)
-            }
-
-            return nextProtocol(protocols.shift())
-          }
-
-          const conn = observeConnection(null, protocol, _conn, this.switch.observer)
-
-          this.muxer = this.switch.muxers[protocol].dialer(conn)
-          this.switch.connection.add(this)
-
-          this.muxer.once('close', () => {
-            this.close()
-          })
-
-          this.muxer.on('stream', (conn) => {
-            this.log(`new stream created via muxer to ${this.theirB58Id}`)
-            conn.setPeerInfo(this.theirPeerInfo)
-            this.switch.protocolMuxer(null)(conn)
-          })
-
-          this.switch.emit('peer-mux-established', this.theirPeerInfo)
-          this._didUpgrade(null)
-        })
-      }
-
-      nextProtocol(protocols.shift())
-    })
-
+     })    
   }
 
   /**

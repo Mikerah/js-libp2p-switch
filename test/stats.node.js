@@ -139,6 +139,11 @@ describe('Stats', () => {
 
       switches.forEach((swtch) => {
         expect(swtch.stats.protocols().sort()).to.deep.equal(expectedProtocols)
+
+	expectedProtocols.forEach((protocol) => {
+	  expect(swtch._peerInfo.protocols.has(protocol)).to.be.true
+          console.log(swtch._peerInfo.protocols)
+	})
       })
 
       teardown(switches, done)

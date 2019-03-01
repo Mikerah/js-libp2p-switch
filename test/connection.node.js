@@ -13,6 +13,7 @@ const secio = require('libp2p-secio')
 const pull = require('pull-stream')
 const multiplex = require('libp2p-mplex')
 const spdy = require('libp2p-spdy')
+const identify = require('libp2p-identify').multicodec
 const Connection = require('interface-connection').Connection
 const Protector = require('libp2p-pnet')
 const generatePSK = Protector.generate
@@ -178,6 +179,7 @@ describe('ConnectionFSM', () => {
     })
     connection.once('encrypted', (conn) => {
       expect(conn).to.be.an.instanceof(Connection)
+      expect(connection.theirPeerInfo.protocols.has(secio.tag))
       done()
     })
 
@@ -224,6 +226,8 @@ describe('ConnectionFSM', () => {
     })
     connection.once('muxed', (conn) => {
       expect(conn.multicodec).to.equal(multiplex.multicodec)
+      expect(connection.theirPeerInfo.protocols.has(conn.multicodec)).to.be.true
+      expect(connection.theirPeerInfo.protocols.has(identify)).to.be.true
       done()
     })
 
@@ -278,6 +282,9 @@ describe('ConnectionFSM', () => {
         expect(protocolConn).to.be.an.instanceof(Connection)
         done()
       })
+
+      expect(connection.theirPeerInfo.protocols.has('/muxed-conn-test/1.0.0')).to.be.true
+      expect(connection.theirPeerInfo.protocols.has(identify)).to.be.true
     })
 
     connection.dial()
@@ -354,6 +361,8 @@ describe('ConnectionFSM', () => {
           expect(protocolConn).to.be.an.instanceof(Connection)
           done()
         })
+
+	expect(connection.theirPeerInfo.protocols.has('/unmuxed-conn-test/1.0.0')).to.be.true
       })
 
       connection.dial()

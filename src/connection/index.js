@@ -361,7 +361,6 @@ class ConnectionFSM extends BaseConnection {
           const conn = observeConnection(null, key, _conn, this.switch.observer)
 
           this.muxer = this.switch.muxers[key].dialer(conn)
-          // this.switch.muxedConns[this.theirB58Id] = this
           this.switch.connection.add(this)
 
           this.muxer.once('close', () => {
@@ -376,7 +375,7 @@ class ConnectionFSM extends BaseConnection {
           })
          
           this._doLs()
-
+          
           this.switch.emit('peer-mux-established', this.theirPeerInfo)
 
           this._didUpgrade(null)

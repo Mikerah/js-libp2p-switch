@@ -179,8 +179,12 @@ describe('ConnectionFSM', () => {
     })
     connection.once('encrypted', (conn) => {
       expect(conn).to.be.an.instanceof(Connection)
-      expect(connection.theirPeerInfo.protocols.has(secio.tag))
       done()
+    })
+
+    connection.switch.once('peer-mux-established', (peerInfo) => {
+       expect(peerInfo).to.deep.equal(connection.theirPeerInfo)
+       expect(peerInfo.protocols.has(multiplex.multicoded)).to.equal(true)
     })
 
     connection.dial()
@@ -226,11 +230,14 @@ describe('ConnectionFSM', () => {
     })
     connection.once('muxed', (conn) => {
       expect(conn.multicodec).to.equal(multiplex.multicodec)
-      expect(connection.theirPeerInfo.protocols.has(conn.multicodec)).to.be.true
-      expect(connection.theirPeerInfo.protocols.has(identify)).to.be.true
-      done()
     })
 
+    connection.switch.once('peer-mux-established', (peerInfo) => {
+      expect(peerInfo).to.deep.equal(connection.theirPeerInfo)
+      expect(peerInfo.protocols.has(multiplex.multicodec)).to.equal(true)
+      done()
+    })
+	  
     connection.dial()
   })
 
@@ -270,21 +277,28 @@ describe('ConnectionFSM', () => {
       expect(conn).to.be.an.instanceof(Connection)
       connection.encrypt()
     })
+
     connection.once('encrypted', (conn) => {
       expect(conn).to.be.an.instanceof(Connection)
       connection.upgrade()
     })
+
     connection.once('muxed', (conn) => {
       expect(conn.multicodec).to.equal(multiplex.multicodec)
 
       connection.shake('/muxed-conn-test/1.0.0', (err, protocolConn) => {
         expect(err).to.not.exist()
         expect(protocolConn).to.be.an.instanceof(Connection)
-        done()
       })
 
-      expect(connection.theirPeerInfo.protocols.has('/muxed-conn-test/1.0.0')).to.be.true
-      expect(connection.theirPeerInfo.protocols.has(identify)).to.be.true
+    })
+
+    connection.switch.once('peer-mux-established', (peerInfo) => {
+      expect(peerInfo).to.deep.equal(connection.theirPeerInfo)
+      expect(peerInfo.protocols.has(multiplex.multicodec)).to.equal(true)
+      expect(peerInfo.protocols.has(identify)).to.equal(true)
+      expect(peerInfo.protocols.has('/muxed-conn-test/1.0.0')).to.equal(true)
+      done()
     })
 
     connection.dial()
@@ -351,7 +365,7 @@ describe('ConnectionFSM', () => {
         connection.upgrade()
       })
       connection.once('muxed', () => {
-        throw new Error('connection shouldnt be muxed')
+        throw new Error('connection shouldn\'t be muxed')
       })
       connection.once('unmuxed', (conn) => {
         expect(conn).to.be.an.instanceof(Connection)
@@ -361,10 +375,15 @@ describe('ConnectionFSM', () => {
           expect(protocolConn).to.be.an.instanceof(Connection)
           done()
         })
-
-	expect(connection.theirPeerInfo.protocols.has('/unmuxed-conn-test/1.0.0')).to.be.true
       })
 
+      connection.switch.once('peer-mux-established', (peerInfo) => {
+        expect(peerInfo).to.deep.equal(connection.switch.theirPeerInfo)
+        expect(peerInfo.protocols.has(multiplex.multicodec)).to.equal(true)
+        expect(peerInfo.protocols.has(identify)).to.equal(true)
+        expect(peerInfo.protocols.has('/unmuxed-conn-test/1.0.0')).to.equal(true)
+      })
+      
       connection.dial()
     })
   })

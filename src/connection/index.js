@@ -6,6 +6,10 @@ const multistream = require('multistream-select')
 const withIs = require('class-is')
 const BaseConnection = require('./base')
 
+const pull = require('pull-stream/pull')
+const values = require('pull-stream/sources/values')
+const map = require('pull-stream/throughs/map')
+
 const observeConnection = require('../observe-connection')
 const Errors = require('../errors')
 
@@ -381,9 +385,7 @@ class ConnectionFSM extends BaseConnection {
           this._didUpgrade(null)
         })
       }
-
-      nextMuxer(muxers.shift())
-    })
+    })    
   }
 
   /**
